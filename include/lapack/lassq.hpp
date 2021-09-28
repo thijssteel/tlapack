@@ -39,6 +39,11 @@ namespace lapack {
  *    TINY*EPS -- tiniest representable number;
  *    HUGE     -- biggest representable number.
  * 
+ * @tparam TX   Type of the elements in x
+ * @tparam Func Type of the function used for computing the absolute value
+ *      @see lassq( blas::idx_t, TX const*, blas::int_t, real_type<TX> &, real_type<TX> & )
+ *      for the example using blas::abs 
+ * 
  * @param[in] n The number of elements to be used from the vector x.
  * @param[in] x Array of dimension $(1+(n-1)*\abs(incx))$.
  * @param[in] incx. The increment between successive values of the vector x.
@@ -50,23 +55,24 @@ namespace lapack {
  * @param[in] scl
  * @param[in] sumsq
  * 
- * @ingroup
+ * @ingroup norm
  */
-template< class abs_t, class vector_t >
+template< class vector_t, class abs_t >
 void lassq(
     const vector_t& x,
     real_type< type_t<vector_t> > &scl,
-    real_type< type_t<vector_t> > &sumsq)
+    real_type< type_t<vector_t> > &sumsq,
+    abs_t absFunc )
 {
     using real_t = real_type< type_t<vector_t> >;
     using idx_t  = size_type< vector_t >;
     using blas::isnan;
     using blas::sqrt;
 
-    // constants
-    const idx_t n = size(x);
+    #define SQUARE(x) (x)*(x)
 
     // constants
+    const idx_t n = size(x);
     const real_t zero( 0 );
     const real_t one( 1 );
     const real_t tsml = blas::blue_min<real_t>();
@@ -100,24 +106,24 @@ void lassq(
 
     for (idx_t i = 0; i < n; ++i)
     {
-        real_t ax = abs_t::abs( x[i] );
+        real_t ax = absFunc( x[i] );
         if( ax > tbig )
-            abig += (ax*sbig) * (ax*sbig);
+            abig += SQUARE(ax*sbig);
         else if( ax < tsml ) {
-            if( abig == zero ) asml += (ax*ssml) * (ax*ssml);
+            if( abig == zero ) asml += SQUARE(ax*ssml);
         } else
-            amed += ax * ax;
+            amed += SQUARE(ax);
     }
 
     // Put the existing sum of squares into one of the accumulators
     if( sumsq > zero ) {
         real_t ax = scl * sqrt( sumsq );
         if( ax > tbig )
-            abig += ((scl*sbig) * (scl*sbig)) * sumsq;
+            abig += SQUARE(scl*sbig) * sumsq;
         else if( ax < tsml ) {
-            if( abig == zero ) asml += ((scl*ssml) * (scl*ssml)) * sumsq;
+            if( abig == zero ) asml += SQUARE(scl*ssml) * sumsq;
         } else
-            amed += (scl * scl) * sumsq;
+            amed += SQUARE(scl) * sumsq;
     }
 
     // Combine abig and amed or amed and asml if
@@ -147,7 +153,7 @@ void lassq(
             }
 
             scl = one;
-            sumsq = (ymax * ymax) * ( one + (ymin/ymax) * (ymin/ymax) );
+            sumsq = SQUARE(ymax) * ( one + SQUARE(ymin/ymax) );
         }
         else {
             scl = one / ssml;
@@ -159,6 +165,8 @@ void lassq(
         scl = one;
         sumsq = amed;
     }
+
+    #undef SQUARE
 }
 
 template< class vector_t >
@@ -168,16 +176,10 @@ void lassq(
     real_type< type_t<vector_t> > &scl,
     real_type< type_t<vector_t> > &sumsq)
 {
-    using T      = type_t<vector_t>;
-    using real_t = real_type< T >;
-    
-    struct absValue {
-        static inline real_t abs( const T& x ) {
-            return blas::abs( x );
-        }
-    };
-    
-    return lassq< absValue >( x, scl, sumsq );
+    using T = type_t<vector_t>;
+    return lassq( x, scl, sumsq,
+        []( const T& x ){ return blas::abs(x); }
+    );
 }
 
 } // lapack

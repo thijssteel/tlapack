@@ -1,6 +1,5 @@
-/// @file lanhe.hpp
+/// @file lanhe.hpp Returns the norm of a Hermitian matrix.
 /// @author Weslley S Pereira, University of Colorado Denver, USA
-/// Adapted from @see https://github.com/langou/latl/blob/master/include/lansy.h
 //
 // Copyright (c) 2012-2022, University of Colorado Denver. All rights reserved.
 //
@@ -138,12 +137,9 @@ lanhe( norm_t normType, uplo_t uplo, const matrix_t& A )
         ssq *= 2;
 
         // Sum the real part in the diagonal
-        struct absReValue {
-            static inline real_t abs( const T& x ) {
-                return blas::abs( real(x) );
-            }
-        };
-        lassq< absReValue >( diag(A,0), scale, ssq );
+        lassq( diag(A,0), scale, ssq,
+            []( const T& x ){ return blas::abs( real(x) ); }
+        );
 
         // Compute the scaled square root
         norm = scale * sqrt(ssq);
