@@ -56,6 +56,7 @@ lanhe( norm_t normType, uplo_t uplo, const matrix_t& A )
     using blas::isnan;
     using blas::sqrt;
     using blas::real;
+    using blas::safe_max;
 
     // constants
     const real_t zero(0.0);
@@ -134,7 +135,12 @@ lanhe( norm_t normType, uplo_t uplo, const matrix_t& A )
             for (idx_t j = 0; j < n-1; ++j)
                 lassq( subvector( col(A,j), pair{j+1,n} ), scale, ssq );
         }
-        ssq *= 2;
+        
+        // Multiplies the sum by 2
+        if( ssq < safe_max<real_t>() )
+            ssq *= 2;
+        else
+            scale *= sqrt(2);
 
         // Sum the real part in the diagonal
         lassq( diag(A,0), scale, ssq,
@@ -167,7 +173,7 @@ lanhe( norm_t normType, uplo_t uplo, const matrix_t& A, work_t& work )
     using idx_t  = size_type< matrix_t >;
     using blas::isnan;
     using blas::real;
-
+    
     // quick redirect
     if      ( is_same_v<norm_t,max_norm_t>  ) return lansy( max_norm,  uplo, A );
     else if ( is_same_v<norm_t,frob_norm_t> ) return lansy( frob_norm, uplo, A );
