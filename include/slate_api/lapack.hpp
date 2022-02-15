@@ -43,6 +43,7 @@
 #include "slate_api/lapack/larnv.hpp"
 #include "slate_api/lapack/lascl.hpp"
 #include "slate_api/lapack/lassq.hpp"
+#include "slate_api/lapack/lacgv.hpp"
 
 // QR factorization
 // ----------------
